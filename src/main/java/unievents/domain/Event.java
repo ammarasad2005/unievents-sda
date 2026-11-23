@@ -254,9 +254,15 @@ public class Event {
     // Seat / waitlist accounting
     // ------------------------------------------------------------------
 
+    /**
+     * Seat holders: students currently REGISTERED plus those already ATTENDED
+     * (an attended student still occupies a seat). Used for capacity math,
+     * the report and the capacity-edit rule.
+     */
     public int getRegisteredCount() {
         return (int) registrations.stream()
-                .filter(r -> r.getStatus() == RegistrationStatus.REGISTERED)
+                .filter(r -> r.getStatus() == RegistrationStatus.REGISTERED
+                        || r.getStatus() == RegistrationStatus.ATTENDED)
                 .count();
     }
 
@@ -344,7 +350,7 @@ public class Event {
 
     public Registration findRegistration(int registrationId) {
         return registrations.stream()
-                .filter(r -> r.getRegistrationId() == registrationId)
+                .filter(r -> r.getRegistrationId() != null && r.getRegistrationId() == registrationId)
                 .findFirst()
                 .orElse(null);
     }
@@ -373,8 +379,8 @@ public class Event {
         return promoted;
     }
 
-    /** Closes position gaps after a waitlist entry leaves. */
-    private void resequenceWaitlist() {
+    /** Closes position gaps after a waitlist entry leaves (package-private: Registration.cancel uses it). */
+    void resequenceWaitlist() {
         int pos = 1;
         for (Registration r : getWaitlist()) {
             r.setWaitlistPosition(pos++);
@@ -439,22 +445,31 @@ public class Event {
 
     /** Audience sizes for the announcement screen (SD-08 getAudienceCounts). */
     public AudienceCounts getAudienceCounts() {
-        return new AudienceCounts(getRegisteredCount(), getWaitlistedCount(),
-                getRegisteredCount() + getWaitlistedCount());
+        return new AudienceCounts(getSeatHolders().size(), getWaitlistedCount(),
+                getSeatHolders().size() + getWaitlistedCount());
     }
 
-    /** Students in the chosen audience (SD-08 getAudience). */
+    /** Students in the chosen audience (SD-08 getAudience). REGISTERED covers seat holders. */
     public List<Student> getAudience(AudienceType audience) {
-        RegistrationStatus wanted = switch (audience) {
-            case REGISTERED -> RegistrationStatus.REGISTERED;
-            case WAITLISTED -> RegistrationStatus.WAITLISTED;
-            case BOTH -> null;
+        List<Student> seatHolders = getSeatHolders().stream()
+                .map(Registration::getStudent).toList();
+        List<Student> waitlisted = getWaitlist().stream()
+                .map(Registration::getStudent).toList();
+        return switch (audience) {
+            case REGISTERED -> seatHolders;
+            case WAITLISTED -> waitlisted;
+            case BOTH -> {
+                List<Student> all = new ArrayList<>(seatHolders);
+                all.addAll(waitlisted);
+                yield all;
+            }
         };
+    }
+
+    private List<Registration> getSeatHolders() {
         return registrations.stream()
                 .filter(r -> r.getStatus() == RegistrationStatus.REGISTERED
-                        || r.getStatus() == RegistrationStatus.WAITLISTED)
-                .filter(r -> wanted == null || r.getStatus() == wanted)
-                .map(Registration::getStudent)
+                        || r.getStatus() == RegistrationStatus.ATTENDED)
                 .toList();
     }
 

@@ -100,7 +100,8 @@ public class Registration {
     /**
      * Cancels this registration (SD-03). When a REGISTERED seat is freed and
      * the waitlist is non-empty, the event promotes its next waitlisted
-     * student. The returned status is CANCELLED.
+     * student; when a WAITLISTED entry leaves, remaining positions close up.
+     * The returned status is CANCELLED.
      */
     public RegistrationStatus cancel() {
         if (status == RegistrationStatus.CANCELLED) {
@@ -114,6 +115,8 @@ public class Registration {
         this.waitlistPosition = null;
         if (seatFreed) {
             event.promoteNextWaitlisted();
+        } else {
+            event.resequenceWaitlist();
         }
         return status;
     }
@@ -194,8 +197,9 @@ public class Registration {
             }
             case MOVE_TO_WAITLIST -> {
                 if (status == RegistrationStatus.REGISTERED) {
+                    int nextPosition = event.getWaitlist().size() + 1;   // computed first: this registration is not yet waitlisted
                     this.status = RegistrationStatus.WAITLISTED;
-                    this.waitlistPosition = event.getWaitlist().size() + 1;
+                    this.waitlistPosition = nextPosition;
                 } else if (status != RegistrationStatus.WAITLISTED) {
                     throw new IllegalStateException("Only seated registrations can be moved to the waitlist.");
                 }
