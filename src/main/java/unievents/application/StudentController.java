@@ -1,6 +1,8 @@
 package unievents.application;
 
 import unievents.domain.Attendance;
+import unievents.domain.Category;
+import unievents.domain.Club;
 import unievents.domain.Event;
 import unievents.domain.Notification;
 import unievents.domain.Registration;
@@ -49,6 +51,15 @@ public class StudentController {
     public EventDetails getEventDetails(int eventId) {
         Event event = data.findEventById(eventId);
         return toDetails(event);
+    }
+
+    /** Filter dimensions for the browse screen (UC1). */
+    public List<Category> getCategories() {
+        return data.findAllCategories();
+    }
+
+    public List<Club> getClubs() {
+        return data.findAllClubs();
     }
 
     // ------------------------------------------------------------------
