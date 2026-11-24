@@ -63,9 +63,7 @@ public class ConflictController {
             data.beginTransaction();
             ConflictStatus status = conflict.resolve(admin, resolution, reason);   // domain applies
             data.saveConflictedRegistrations(conflict.getConcernedRegistrations());
-            if (data instanceof unievents.infrastructure.persistence.SupabaseHandler sh) {
-                sh.updateConflict(conflict);
-            }
+            data.updateConflict(conflict);
             data.commit();
             persistNotifications();
             return status;

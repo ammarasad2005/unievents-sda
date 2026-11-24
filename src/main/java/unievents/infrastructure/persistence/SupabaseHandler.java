@@ -319,7 +319,7 @@ public class SupabaseHandler implements DataHandler {
         ps.setTimestamp(6, Timestamp.valueOf(event.getEndDateTime()));
         ps.setString(7, event.getVenue());
         ps.setInt(8, event.getCapacity());
-        ps.setString(9, event.getStatus().name());
+        setEnum(ps, 9, event.getStatus());
         ps.setString(10, event.getCheckInCode());
     }
 
@@ -479,7 +479,7 @@ public class SupabaseHandler implements DataHandler {
     @Override
     public void loadRegistrations(Student student) {
         String sql = """
-                SELECT r.registration_id, r.registered_at, r.status,
+                SELECT r.registration_id, r.registered_at, r.status AS reg_status,
                        r.waitlist_position,
                        e.*, c.name AS club_name, cat.name AS category_name,
                        att.attendance_id, att.checked_in_at, att.method
@@ -499,7 +499,7 @@ public class SupabaseHandler implements DataHandler {
                     Event event = mapEventRow(rs, null);
                     Registration reg = new Registration(rs.getInt("registration_id"), student, event,
                             toLocalDateTime(rs.getTimestamp("registered_at")),
-                            RegistrationStatus.valueOf(rs.getString("status")),
+                            RegistrationStatus.valueOf(rs.getString("reg_status")),
                             (Integer) rs.getObject("waitlist_position"));
                     attachAttendance(reg, rs);
                     registrations.add(reg);
@@ -548,6 +548,14 @@ public class SupabaseHandler implements DataHandler {
         if (registrations == null || registrations.isEmpty()) {
             return;
         }
+        boolean outerTransaction = !db.isAutoCommit();
+        if (outerTransaction) {
+            // caller owns the transaction: just write the rows
+            for (Registration r : registrations) {
+                saveRegistration(r);
+            }
+            return;
+        }
         try {
             db.beginTransaction();
             for (Registration r : registrations) {
@@ -570,7 +578,7 @@ public class SupabaseHandler implements DataHandler {
             ps.setInt(1, registration.getEvent().getEventId());
             ps.setInt(2, registration.getStudent().getUserId());
             ps.setTimestamp(3, Timestamp.valueOf(registration.getRegisteredAt()));
-            ps.setString(4, registration.getStatus().name());
+            setEnum(ps, 4, registration.getStatus());
             if (registration.getWaitlistPosition() > 0) {
                 ps.setInt(5, registration.getWaitlistPosition());
             } else {
@@ -589,7 +597,7 @@ public class SupabaseHandler implements DataHandler {
                 WHERE registration_id = ?
                 """;
         try (PreparedStatement ps = db.getConnection().prepareStatement(sql)) {
-            ps.setString(1, registration.getStatus().name());
+            setEnum(ps, 1, registration.getStatus());
             if (registration.getWaitlistPosition() > 0) {
                 ps.setInt(2, registration.getWaitlistPosition());
             } else {
@@ -616,7 +624,7 @@ public class SupabaseHandler implements DataHandler {
                 Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, registration.getRegistrationId());
             ps.setTimestamp(2, Timestamp.valueOf(attendance.getCheckedInAt()));
-            ps.setString(3, attendance.getMethod().name());
+            setEnum(ps, 3, attendance.getMethod());
             ps.executeUpdate();
             attendance.assignId(generatedKey(ps, "attendance"));
         } catch (SQLException e) {
@@ -696,7 +704,7 @@ public class SupabaseHandler implements DataHandler {
             ps.setInt(2, announcement.getSender().getUserId());
             ps.setString(3, announcement.getSubject());
             ps.setString(4, announcement.getMessage());
-            ps.setString(5, announcement.getAudience().name());
+            setEnum(ps, 5, announcement.getAudience());
             ps.setTimestamp(6, Timestamp.valueOf(announcement.getSentAt()));
             ps.executeUpdate();
             announcement.assignId(generatedKey(ps, "announcement"));
@@ -719,7 +727,7 @@ public class SupabaseHandler implements DataHandler {
             for (Notification n : notifications) {
                 ps.setInt(1, n.getRecipient().getUserId());
                 ps.setString(2, n.getMessage());
-                ps.setString(3, n.getType().name());
+                setEnum(ps, 3, n.getType());
                 ps.setTimestamp(4, Timestamp.valueOf(n.getCreatedAt()));
                 ps.setBoolean(5, n.isRead());
                 if (n.getAnnouncement() != null && n.getAnnouncement().getAnnouncementId() != null) {
@@ -794,7 +802,7 @@ public class SupabaseHandler implements DataHandler {
     @Override
     public List<RegistrationConflict> findOpenConflicts() {
         String sql = """
-                SELECT rc.conflict_id, rc.type, rc.status,
+                SELECT rc.conflict_id, rc.type AS conflict_type, rc.status AS conflict_status,
                        rc.detected_at,
                        e.*, c.name AS club_name, cat.name AS category_name
                 FROM registration_conflicts rc
@@ -810,8 +818,8 @@ public class SupabaseHandler implements DataHandler {
             while (rs.next()) {
                 Event event = mapEventRow(rs, null);
                 RegistrationConflict conflict = new RegistrationConflict(rs.getInt("conflict_id"),
-                        event, ConflictType.valueOf(rs.getString("type")),
-                        ConflictStatus.valueOf(rs.getString("status")),
+                        event, ConflictType.valueOf(rs.getString("conflict_type")),
+                        ConflictStatus.valueOf(rs.getString("conflict_status")),
                         toLocalDateTime(rs.getTimestamp("detected_at")),
                         null, null, null, null);
                 loadConcernedRegistrations(conflict);
@@ -826,7 +834,7 @@ public class SupabaseHandler implements DataHandler {
     @Override
     public RegistrationConflict findConflictById(int conflictId) {
         String sql = """
-                SELECT rc.conflict_id, rc.type, rc.status,
+                SELECT rc.conflict_id, rc.type AS conflict_type, rc.status AS conflict_status,
                        rc.detected_at,
                        e.*, c.name AS club_name, cat.name AS category_name
                 FROM registration_conflicts rc
@@ -844,8 +852,8 @@ public class SupabaseHandler implements DataHandler {
                 Event event = mapEventRow(rs, null);
                 loadRegistrations(event);
                 RegistrationConflict conflict = new RegistrationConflict(rs.getInt("conflict_id"),
-                        event, ConflictType.valueOf(rs.getString("type")),
-                        ConflictStatus.valueOf(rs.getString("status")),
+                        event, ConflictType.valueOf(rs.getString("conflict_type")),
+                        ConflictStatus.valueOf(rs.getString("conflict_status")),
                         toLocalDateTime(rs.getTimestamp("detected_at")),
                         null, null, null, null);
                 loadConcernedRegistrations(conflict);
@@ -859,11 +867,13 @@ public class SupabaseHandler implements DataHandler {
     private void loadConcernedRegistrations(RegistrationConflict conflict) throws SQLException {
         String sql = """
                 SELECT r.registration_id, r.registered_at, r.status, r.waitlist_position,
-                       u.user_id, u.full_name, u.email, u.password_hash, u.is_active, s.roll_number
+                       u.user_id, u.full_name, u.email, u.password_hash, u.is_active, s.roll_number,
+                       att.attendance_id, att.checked_in_at, att.method
                 FROM conflict_registrations cr
                 JOIN registrations r ON r.registration_id = cr.registration_id
                 JOIN students s ON s.user_id = r.student_id
                 JOIN users u ON u.user_id = s.user_id
+                LEFT JOIN attendances att ON att.registration_id = r.registration_id
                 WHERE cr.conflict_id = ?
                 """;
         List<Registration> concerned = new ArrayList<>();
@@ -888,10 +898,10 @@ public class SupabaseHandler implements DataHandler {
         try (PreparedStatement ps = db.getConnection().prepareStatement(sql,
                 Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, conflict.getEvent().getEventId());
-            ps.setString(2, conflict.getType().name());
-            ps.setString(3, conflict.getStatus().name());
+            setEnum(ps, 2, conflict.getType());
+            setEnum(ps, 3, conflict.getStatus());
             ps.setTimestamp(4, Timestamp.valueOf(conflict.getDetectedAt()));
-            ps.setString(5, conflict.getResolution() == null ? null : conflict.getResolution().name());
+            setEnum(ps, 5, conflict.getResolution());
             ps.setString(6, conflict.getReason());
             ps.setTimestamp(7, conflict.getResolvedAt() == null ? null : Timestamp.valueOf(conflict.getResolvedAt()));
             if (conflict.getResolvedBy() != null) {
@@ -911,7 +921,31 @@ public class SupabaseHandler implements DataHandler {
         saveRegistrations(registrations);
     }
 
+    @Override
+    public List<ClubOrganizer> findAllOrganizers() {
+        String sql = """
+                SELECT u.user_id, u.full_name, u.email, u.password_hash, u.is_active, o.is_president
+                FROM users u
+                JOIN club_organizers o ON o.user_id = u.user_id
+                WHERE u.is_active = TRUE
+                ORDER BY u.full_name
+                """;
+        List<ClubOrganizer> organizers = new ArrayList<>();
+        try (PreparedStatement ps = db.getConnection().prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                organizers.add(new ClubOrganizer(rs.getInt("user_id"), rs.getString("full_name"),
+                        rs.getString("email"), rs.getString("password_hash"), rs.getBoolean("is_active"),
+                        rs.getBoolean("is_president")));
+            }
+            return organizers;
+        } catch (SQLException e) {
+            throw new IllegalStateException("Organizer list failed: " + e.getMessage(), e);
+        }
+    }
+
     /** Updates conflict state after a resolve (admin flow). */
+    @Override
     public void updateConflict(RegistrationConflict conflict) {
         String sql = """
                 UPDATE registration_conflicts
@@ -919,8 +953,8 @@ public class SupabaseHandler implements DataHandler {
                 WHERE conflict_id = ?
                 """;
         try (PreparedStatement ps = db.getConnection().prepareStatement(sql)) {
-            ps.setString(1, conflict.getStatus().name());
-            ps.setString(2, conflict.getResolution() == null ? null : conflict.getResolution().name());
+            setEnum(ps, 1, conflict.getStatus());
+            setEnum(ps, 2, conflict.getResolution());
             ps.setString(3, conflict.getReason());
             ps.setTimestamp(4, conflict.getResolvedAt() == null ? null : Timestamp.valueOf(conflict.getResolvedAt()));
             if (conflict.getResolvedBy() != null) {
@@ -988,6 +1022,15 @@ public class SupabaseHandler implements DataHandler {
     // ==================================================================
     // Helpers
     // ==================================================================
+
+    /** Binds an enum value so PostgreSQL coerces it to its enum type (Types.OTHER). */
+    private void setEnum(PreparedStatement ps, int index, Enum<?> value) throws SQLException {
+        if (value == null) {
+            ps.setNull(index, Types.OTHER);
+        } else {
+            ps.setObject(index, value.name(), Types.OTHER);
+        }
+    }
 
     private int generatedKey(PreparedStatement ps, String what) throws SQLException {
         try (ResultSet keys = ps.getGeneratedKeys()) {

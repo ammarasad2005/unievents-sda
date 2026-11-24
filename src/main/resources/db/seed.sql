@@ -37,13 +37,13 @@ DELETE FROM users;
 -- Users (password hash = sha256('unievents'))
 -- ---------------------------------------------------------------------------
 INSERT INTO users (user_id, full_name, email, password_hash, is_active, role) VALUES
-  (1, 'Ayna Khan',    'ayna@nu.edu.pk',   '4c1a83c9e31e64d1c1c46e7f6e38e343e29a4f5b6cc2b91e2b6e3584ac6a4c2', TRUE, 'STUDENT'),
-  (2, 'Bilal Raza',   'bilal@nu.edu.pk',  '4c1a83c9e31e64d1c1c46e7f6e38e343e29a4f5b6cc2b91e2b6e3584ac6a4c2', TRUE, 'STUDENT'),
-  (3, 'Cyra Ali',     'cyra@nu.edu.pk',   '4c1a83c9e31e64d1c1c46e7f6e38e343e29a4f5b6cc2b91e2b6e3584ac6a4c2', TRUE, 'STUDENT'),
-  (4, 'Dawood Iqbal', 'dawood@nu.edu.pk', '4c1a83c9e31e64d1c1c46e7f6e38e343e29a4f5b6cc2b91e2b6e3584ac6a4c2', TRUE, 'STUDENT'),
-  (10, 'Hamza Tariq', 'hamza@nu.edu.pk',  '4c1a83c9e31e64d1c1c46e7f6e38e343e29a4f5b6cc2b91e2b6e3584ac6a4c2', TRUE, 'CLUB_ORGANIZER'),
-  (11, 'Zoya Ahmed',  'zoya@nu.edu.pk',   '4c1a83c9e31e64d1c1c46e7f6e38e343e29a4f5b6cc2b91e2b6e3584ac6a4c2', TRUE, 'CLUB_ORGANIZER'),
-  (99, 'Sara Malik',  'sara@nu.edu.pk',   '4c1a83c9e31e64d1c1c46e7f6e38e343e29a4f5b6cc2b91e2b6e3584ac6a4c2', TRUE, 'ADMIN');
+  (1, 'Ayna Khan',    'ayna@nu.edu.pk',   'c91358ea719fbc40269577d5ae17d5537239d25d465e74f38c275f17929b3ab6', TRUE, 'STUDENT'),
+  (2, 'Bilal Raza',   'bilal@nu.edu.pk',  'c91358ea719fbc40269577d5ae17d5537239d25d465e74f38c275f17929b3ab6', TRUE, 'STUDENT'),
+  (3, 'Cyra Ali',     'cyra@nu.edu.pk',   'c91358ea719fbc40269577d5ae17d5537239d25d465e74f38c275f17929b3ab6', TRUE, 'STUDENT'),
+  (4, 'Dawood Iqbal', 'dawood@nu.edu.pk', 'c91358ea719fbc40269577d5ae17d5537239d25d465e74f38c275f17929b3ab6', TRUE, 'STUDENT'),
+  (10, 'Hamza Tariq', 'hamza@nu.edu.pk',  'c91358ea719fbc40269577d5ae17d5537239d25d465e74f38c275f17929b3ab6', TRUE, 'CLUB_ORGANIZER'),
+  (11, 'Zoya Ahmed',  'zoya@nu.edu.pk',   'c91358ea719fbc40269577d5ae17d5537239d25d465e74f38c275f17929b3ab6', TRUE, 'CLUB_ORGANIZER'),
+  (99, 'Sara Malik',  'sara@nu.edu.pk',   'c91358ea719fbc40269577d5ae17d5537239d25d465e74f38c275f17929b3ab6', TRUE, 'ADMIN');
 
 SELECT setval('users_user_id_seq', 99, true);
 
@@ -97,8 +97,9 @@ INSERT INTO events (event_id, club_id, category_id, title, description,
    'DRAFT', 'AICHAT'),
   (4, 1, 1, 'Intro to Kotlin',
    'Kotlin fundamentals for Java developers (completed past event).',
-   NOW() - INTERVAL '10 days 10:00', NOW() - INTERVAL '10 days 12:00', 'Lab 3-01', 3,
-   'COMPLETED', 'KOT001');
+   (CURRENT_DATE - INTERVAL '10 days') + TIME '10:00',
+   (CURRENT_DATE - INTERVAL '10 days') + TIME '12:00',
+   'Lab 3-01', 3, 'COMPLETED', 'KOT001');
 
 SELECT setval('events_event_id_seq', 4, true);
 

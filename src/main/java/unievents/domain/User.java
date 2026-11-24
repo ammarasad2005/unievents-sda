@@ -55,7 +55,10 @@ public abstract class User {
 
     /** Domain association "User receives Notification" (D4/D5). */
     public void receiveNotification(Notification notification) {
-        pendingNotifications.add(notification);
+        if (notification != null) {
+            notification.bindRecipient(this);
+            pendingNotifications.add(notification);
+        }
     }
 
     /** Returns and clears notifications created by the last domain operation (persistence hook). */

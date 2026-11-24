@@ -110,6 +110,15 @@ public final class DatabaseController {
         }
     }
 
+    /** True when no transaction is active (used to nest writes safely). */
+    public boolean isAutoCommit() {
+        try {
+            return connection == null || connection.isClosed() || connection.getAutoCommit();
+        } catch (SQLException e) {
+            return true;
+        }
+    }
+
     /** Opens a transaction (auto-commit off). */
     public void beginTransaction() {
         try {
@@ -133,10 +142,13 @@ public final class DatabaseController {
         }
     }
 
-    /** Rolls back the current transaction and restores auto-commit. */
+    /** Rolls back the current transaction; safe when none is active. */
     public void rollback() {
         try {
-            Connection c = getConnection();
+            Connection c = connection;
+            if (c == null || c.isClosed() || c.getAutoCommit()) {
+                return;             // nothing to roll back
+            }
             c.rollback();
             c.setAutoCommit(true);
         } catch (SQLException e) {

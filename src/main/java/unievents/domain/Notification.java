@@ -6,20 +6,21 @@ import java.time.LocalDateTime;
 
 /**
  * In-app notification received by a user.
- * Polymorphism demo point: formatting is derived from the enum, users are
- * handled through the {@code User} supertype in {@code receiveNotification}.
+ * Polymorphism demo point: notifications are received through the
+ * {@code User} supertype ({@code User.receiveNotification}) with no
+ * instanceof or role switch anywhere.
  */
 public class Notification {
 
     private Integer notificationId;     // null until persisted
-    private final User recipient;
-    private final String message;
-    private final NotificationType type;
-    private final LocalDateTime createdAt;
-    private final boolean read;         // fresh notifications are unread
-    private final Announcement announcement;   // link when type == ANNOUNCEMENT
+    private User recipient;
+    private String message;
+    private NotificationType type;
+    private LocalDateTime createdAt;
+    private boolean read;
+    private Announcement announcement;  // link when type == ANNOUNCEMENT
 
-    /** Domain constructor (recipient bound later at persistence time). */
+    /** Domain constructor (recipient bound on receiveNotification). */
     public Notification(String message, NotificationType type) {
         this(null, null, message, type, null, false, null);
     }
@@ -39,6 +40,11 @@ public class Notification {
         this.createdAt = createdAt == null ? LocalDateTime.now() : createdAt;
         this.read = read;
         this.announcement = announcement;
+    }
+
+    /** Binds the receiving user at delivery time (package-private). */
+    void bindRecipient(User user) {
+        this.recipient = user;
     }
 
     public Integer getNotificationId() {

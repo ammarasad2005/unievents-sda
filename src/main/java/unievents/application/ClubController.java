@@ -42,6 +42,6 @@ public class ClubController {
 
     /** Organizers available to be assigned as president (SD-11 helper). */
     public List<ClubOrganizer> getOrganizers() {
-        return data.findOrganizerById(0) == null ? List.of() : List.of();
+        return data.findAllOrganizers();
     }
 }

@@ -16,6 +16,8 @@ import unievents.shared.RegistrationSummary;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Application controller for the five student use cases (UC1–UC5).
@@ -99,32 +101,62 @@ public class StudentController {
     }
 
     /**
-     * Cancels one registration; the domain promotes the next waitlisted
-     * student when a seat is freed (SD-03).
+     * Cancels one registration. The domain promotes the next waitlisted
+     * student inside {@link Registration#cancel()} when a seat is freed, and
+     * the controller persists the touched rows in one transaction (SD-03).
      */
     public RegistrationStatus cancelRegistration(int registrationId) {
         data.loadRegistrations(student);
-        Registration registration = student.findRegistration(registrationId);
+        Registration own = student.findRegistration(registrationId);
+        if (own == null) {
+            throw new IllegalStateException("Registration " + registrationId + " not found.");
+        }
+        // Reload the registration through its event so the object we cancel
+        // is the same instance held in event.getRegistrations(); otherwise the
+        // waitlist promotion triggered by cancel() would mutate a detached copy.
+        Event event = own.getEvent();
+        data.loadRegistrations(event);
+        Registration registration = event.findRegistration(registrationId);
         if (registration == null) {
             throw new IllegalStateException("Registration " + registrationId + " not found.");
         }
-        RegistrationStatus status = registration.cancel();         // may promote
+
+        Map<Integer, RegistrationStatus> before = event.getRegistrations().stream()
+                .collect(Collectors.toMap(Registration::getRegistrationId,
+                        Registration::getStatus));
+        Map<Integer, Integer> positionsBefore = event.getRegistrations().stream()
+                .filter(r -> r.getWaitlistPosition() > 0)
+                .collect(Collectors.toMap(Registration::getRegistrationId,
+                        Registration::getWaitlistPosition));
+
+        RegistrationStatus status = registration.cancel();         // may promote + resequence
+
         try {
             data.beginTransaction();
-            data.saveRegistration(registration);
-            Registration promoted = registration.getEvent().promoteNextWaitlisted();
-            if (promoted == null) {
-                // a waitlisted entry left: close the gaps
-                registration.getEvent().getWaitlist().forEach(data::saveRegistration);
-            } else {
-                data.saveRegistration(promoted);
+            for (Registration r : event.getRegistrations()) {
+                boolean changed = !before.getOrDefault(r.getRegistrationId(), r.getStatus())
+                        .equals(r.getStatus())
+                        || !positionsBefore.getOrDefault(r.getRegistrationId(),
+                                r.getWaitlistPosition()).equals(r.getWaitlistPosition());
+                if (changed) {
+                    data.saveRegistration(r);
+                }
             }
             data.commit();
         } catch (RuntimeException e) {
             data.rollback();
             throw e;
         }
-        persistNotifications();
+        // persist notifications of every student touched by this flow
+        // (the canceller AND any promoted waitlisted student)
+        List<Notification> produced = new java.util.ArrayList<>();
+        for (Registration r : event.getRegistrations()) {
+            produced.addAll(r.getStudent().takePendingNotifications());
+        }
+        produced.addAll(student.takePendingNotifications());
+        if (!produced.isEmpty()) {
+            data.saveNotifications(produced);
+        }
         return status;
     }
 

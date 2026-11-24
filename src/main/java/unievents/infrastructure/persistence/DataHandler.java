@@ -129,8 +129,14 @@ public interface DataHandler {
     /** Persists conflict state + concerned-registration links. */
     void saveConflict(RegistrationConflict conflict);
 
+    /** Updates conflict state after a resolution (SD-12 save). */
+    void updateConflict(RegistrationConflict conflict);
+
     /** Persists resolution changes of registrations touched by a conflict. */
     void saveConflictedRegistrations(List<Registration> registrations);
+
+    /** All organizers (president picker on the Create Club screen, SD-11). */
+    List<ClubOrganizer> findAllOrganizers();
 
     // ------------------------------------------------------------------
     // Transaction control (Supabase/PostgreSQL implementation)

@@ -123,7 +123,14 @@ public class ManagementController {
         Announcement announcement = organizer.createAnnouncement(event, subject,
                 message, audience);                               // domain notifies recipients
         data.saveAnnouncement(announcement);
-        persistNotifications();
+        // persist the in-app notifications created for every recipient
+        List<Notification> produced = new java.util.ArrayList<>();
+        for (Registration r : event.getRegistrations()) {
+            produced.addAll(r.getStudent().takePendingNotifications());
+        }
+        if (!produced.isEmpty()) {
+            data.saveNotifications(produced);
+        }
         return announcement;
     }
 
