@@ -1,0 +1,106 @@
+* {
+    -fx-font-family: "Segoe UI", "Noto Sans", "DejaVu Sans", sans-serif;
+}
+
+.root {
+    -fx-background-color: #f4f6fa;
+}
+
+.app-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1a2b5f;
+}
+
+.subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: #5a6b8c;
+}
+
+.screen-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1a2b5f;
+}
+
+.card {
+    -fx-background-color: white;
+    -fx-background-radius: 10;
+    -fx-padding: 14;
+    -fx-effect: dropshadow(gaussian, rgba(26, 43, 95, 0.10), 8, 0.2, 0, 2);
+}
+
+.button {
+    -fx-background-color: #1a2b5f;
+    -fx-text-fill: white;
+    -fx-background-radius: 6;
+    -fx-padding: 6 14 6 14;
+    -fx-font-weight: bold;
+}
+
+.button:hover {
+    -fx-background-color: #2a4380;
+}
+
+.button:disabled {
+    -fx-background-color: #9aa7c4;
+}
+
+.button-secondary {
+    -fx-background-color: #e8ecf5;
+    -fx-text-fill: #1a2b5f;
+}
+
+.button-secondary:hover {
+    -fx-background-color: #d8dfef;
+}
+
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #33415e;
+    -fx-alignment: baseline-left;
+    -fx-font-weight: normal;
+}
+
+.nav-button:hover {
+    -fx-background-color: #e3e9f5;
+}
+
+.table-view {
+    -fx-background-color: white;
+    -fx-background-radius: 8;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #e8ecf5;
+}
+
+.label-error {
+    -fx-text-fill: #b3261e;
+    -fx-font-weight: bold;
+}
+
+.label-success {
+    -fx-text-fill: #1b6e3d;
+    -fx-font-weight: bold;
+}
+
+.badge {
+    -fx-background-radius: 10;
+    -fx-padding: 2 8 2 8;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+.combo-box {
+    -fx-background-color: white;
+    -fx-background-radius: 6;
+}
+
+.text-field, .text-area, .date-picker {
+    -fx-background-color: white;
+    -fx-background-radius: 6;
+    -fx-border-color: #c9d3e8;
+    -fx-border-radius: 6;
+}
