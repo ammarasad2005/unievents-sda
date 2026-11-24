@@ -14,8 +14,8 @@ public final class AdminHome {
     }
 
     public static javafx.scene.Node create(UiContext ctx, Admin admin) {
-        ClubController clubController = new ClubController(admin, UniEventsApp.DATA);
-        ConflictController conflictController = new ConflictController(admin, UniEventsApp.DATA);
+        ClubController clubController = new ClubController(admin, UniEventsApp.data());
+        ConflictController conflictController = new ConflictController(admin, UniEventsApp.data());
 
         Shell shell = Shell.create(ctx, "UniEvents · Admin");
         shell.nav("Create Club (UC11)", () -> CreateClubScreen.create(clubController, ctx));

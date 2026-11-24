@@ -6,24 +6,34 @@ import javafx.scene.control.Alert;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import unievents.application.Session;
-import unievents.domain.Admin;
-import unievents.domain.ClubOrganizer;
-import unievents.domain.Student;
 import unievents.domain.User;
 import unievents.infrastructure.persistence.DatabaseController;
 import unievents.infrastructure.persistence.SupabaseHandler;
 
 /**
  * JavaFX entry point. Wires the single DataHandler implementation and swaps
- * role-based home screens after login (polymorphic dispatch on User — no
- * instanceof anywhere in the navigation).
+ * role-based home screens after login. Role routing happens in
+ * {@link HomeRouter} through the polymorphic {@code getRole()} call; there
+ * is no instanceof or type-switch in any business logic.
  */
 public class UniEventsApp extends Application {
 
-    public static final SupabaseHandler DATA = new SupabaseHandler();
+    private static volatile SupabaseHandler dataHandler;
+
+    /** Lazy single DataHandler instance (Protected Variation: swap implementations here). */
+    public static unievents.infrastructure.persistence.DataHandler data() {
+        if (dataHandler == null) {
+            synchronized (UniEventsApp.class) {
+                if (dataHandler == null) {
+                    dataHandler = new SupabaseHandler();
+                }
+            }
+        }
+        return dataHandler;
+    }
 
     private Stage stage;
-    private BorderPane root;
+    BorderPane root;          // package-private: UI flow test reads it
 
     @Override
     public void start(Stage primaryStage) {
@@ -46,9 +56,7 @@ public class UniEventsApp extends Application {
     /** Navigates to the role-based home after login. */
     public void showHome(User user) {
         UiContext ctx = new UiContext(this, user);
-        root.setCenter(user instanceof Student s ? StudentHome.create(ctx, s)
-                : user instanceof ClubOrganizer o ? OrganizerHome.create(ctx, o)
-                : AdminHome.create(ctx, (Admin) user));
+        root.setCenter(HomeRouter.homeFor(ctx, user));
     }
 
     public void show(RegionBuilder builder) {

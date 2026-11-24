@@ -43,7 +43,7 @@ public final class LoginScreen {
         login.setOnAction(e -> {
             error.setText("");
             try {
-                User user = Session.login(email.getText(), password.getText(), UniEventsApp.DATA);
+                User user = Session.login(email.getText(), password.getText(), UniEventsApp.data());
                 if (user == null) {
                     error.setText("Invalid email or password.");
                 } else {

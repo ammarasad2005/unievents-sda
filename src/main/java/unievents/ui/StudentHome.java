@@ -15,7 +15,7 @@ public final class StudentHome {
 
     public static javafx.scene.Node create(UiContext ctx, Student student) {
         StudentController controller =
-                new StudentController(student, (DataHandler) UniEventsApp.DATA);
+                new StudentController(student, (DataHandler) UniEventsApp.data());
 
         Shell shell = Shell.create(ctx, "UniEvents · Student");
         shell.nav("Browse Events (UC1)", () -> BrowseEventsScreen.create(controller, ctx));

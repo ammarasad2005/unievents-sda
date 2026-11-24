@@ -12,7 +12,7 @@ public final class OrganizerHome {
     }
 
     public static javafx.scene.Node create(UiContext ctx, ClubOrganizer organizer) {
-        ManagementController controller = new ManagementController(organizer, UniEventsApp.DATA);
+        ManagementController controller = new ManagementController(organizer, UniEventsApp.data());
 
         Shell shell = Shell.create(ctx, "UniEvents · Organizer");
         shell.nav("My Events (UC6–UC10)", () -> MyEventsScreen.create(controller, ctx));
